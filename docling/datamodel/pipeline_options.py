@@ -196,6 +196,15 @@ class TesseractOcrOptions(OcrOptions):
     )
 
 
+class DoctrOcrOptions(OcrOptions):
+    kind: ClassVar[Literal["doctr"]] = "doctr"
+
+    lang: Optional[List[str]] = None
+    model_name: str = "db_resnet50"
+    pretrained: bool = True
+
+
+
 class OcrMacOptions(OcrOptions):
     """Options for the Mac OCR engine."""
 
