@@ -21,6 +21,7 @@ from docling.utils.profiling import TimeRecorder
 
 _log = logging.getLogger(__name__)
 
+
 class DoctrOcrModel(BaseOcrModel):
     def __init__(
         self,
@@ -35,7 +36,7 @@ class DoctrOcrModel(BaseOcrModel):
             options=options,
             accelerator_options=accelerator_options,
         )
-        
+
         if self.enabled:
             try:
                 from doctr.models import ocr_predictor
@@ -45,7 +46,6 @@ class DoctrOcrModel(BaseOcrModel):
                 )
 
             _log.debug("Initializing Doctr OCR engine")
-            # Initialize a simple Doctr OCR model
             self.model = ocr_predictor(pretrained=True)
         else:
             self.model = None
@@ -64,15 +64,13 @@ class DoctrOcrModel(BaseOcrModel):
             else:
                 with TimeRecorder(conv_res, "ocr"):
                     pil_image = page._backend.get_page_image(scale=1).convert("RGB")
+                    width, height = pil_image.size
 
-                    # 2) Convert it to raw PNG bytes
                     buf = BytesIO()
                     pil_image.save(buf, format="PNG")
                     img_bytes = buf.getvalue()
 
-                    # 3) Wrap in a list and hand to doctr
                     doc = DocumentFile.from_images([img_bytes])
-
                     result = self.model(doc)
 
                     all_cells = []
@@ -81,7 +79,14 @@ class DoctrOcrModel(BaseOcrModel):
                         for block in doc_page.blocks:
                             for line in block.lines:
                                 line_text = " ".join(w.value for w in line.words)
-                                (left, top), (right, bottom) = line.geometry
+                                (left_norm, top_norm), (right_norm, bottom_norm) = line.geometry
+
+                                # Scale normalized coords to pixel coords (no flipping)
+                                left = left_norm * width
+                                right = right_norm * width
+                                top = top_norm * height
+                                bottom = bottom_norm * height
+
                                 if line.words:
                                     conf = float(np.mean([w.confidence for w in line.words]))
                                 else:
@@ -98,11 +103,11 @@ class DoctrOcrModel(BaseOcrModel):
                                             BoundingBox.from_tuple(
                                                 coord=(left, top, right, bottom),
                                                 origin=CoordOrigin.TOPLEFT,
-                                            ),
+                                            )
                                         ),
                                     )
                                 )
-                    # Attach the OCR cells to the page
+
                     page.cells = self.post_process_cells(all_cells, page.cells)
 
                 if settings.debug.visualize_ocr:
