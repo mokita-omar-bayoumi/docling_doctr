@@ -345,7 +345,7 @@ class PageConfidenceScores(BaseModel):
     @computed_field  # type: ignore
     @property
     def mean_score(self) -> ScoreValue:
-        return ScoreValue(
+        score = ScoreValue(
             np.nanmean(
                 [
                     self.ocr_score,
@@ -355,11 +355,14 @@ class PageConfidenceScores(BaseModel):
                 ]
             )
         )
+        if math.isnan(score):
+            return "nan"
+        return score
 
     @computed_field  # type: ignore
     @property
     def low_score(self) -> ScoreValue:
-        return ScoreValue(
+        score = ScoreValue(
             np.nanquantile(
                 [
                     self.ocr_score,
@@ -370,6 +373,9 @@ class PageConfidenceScores(BaseModel):
                 q=0.05,
             )
         )
+        if math.isnan(score):
+            return "nan"
+        return score
 
 
 class ConfidenceReport(PageConfidenceScores):
@@ -380,17 +386,23 @@ class ConfidenceReport(PageConfidenceScores):
     @computed_field  # type: ignore
     @property
     def mean_score(self) -> ScoreValue:
-        return ScoreValue(
+        score = ScoreValue(
             np.nanmean(
                 [c.mean_score for c in self.pages.values()],
             )
         )
+        if math.isnan(score):
+            return "nan"
+        return score
 
     @computed_field  # type: ignore
     @property
     def low_score(self) -> ScoreValue:
-        return ScoreValue(
+        score =  ScoreValue(
             np.nanmean(
                 [c.low_score for c in self.pages.values()],
             )
         )
+        if math.isnan(score):
+            return "nan"
+        return score
