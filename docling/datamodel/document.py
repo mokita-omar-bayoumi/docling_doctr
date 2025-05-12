@@ -47,7 +47,7 @@ from docling_core.types.legacy_doc.document import (
 )
 from docling_core.utils.file import resolve_source_to_stream
 from docling_core.utils.legacy import docling_document_to_legacy
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing_extensions import deprecated
 
 from docling.backend.abstract_backend import (
@@ -56,6 +56,7 @@ from docling.backend.abstract_backend import (
 )
 from docling.datamodel.base_models import (
     AssembledUnit,
+    ConfidenceReport,
     ConversionStatus,
     DocumentStream,
     ErrorItem,
@@ -201,6 +202,7 @@ class ConversionResult(BaseModel):
     pages: List[Page] = []
     assembled: AssembledUnit = AssembledUnit()
     timings: Dict[str, ProfilingItem] = {}
+    confidence: ConfidenceReport = Field(default_factory=ConfidenceReport)
 
     document: DoclingDocument = _EMPTY_DOCLING_DOC
 
@@ -303,6 +305,14 @@ class _DocumentConversionInput(BaseModel):
                     else ""
                 )
                 mime = _DocumentConversionInput._mime_from_extension(ext)
+            if mime is not None and mime.lower() == "application/zip":
+                objname = obj.name.lower()
+                if objname.endswith(".xlsx"):
+                    mime = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                elif objname.endswith(".docx"):
+                    mime = "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                elif objname.endswith(".pptx"):
+                    mime = "application/vnd.openxmlformats-officedocument.presentationml.presentation"
 
         mime = mime or _DocumentConversionInput._detect_html_xhtml(content)
         mime = mime or _DocumentConversionInput._detect_csv(content)
